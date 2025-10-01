@@ -8,7 +8,7 @@ from pyftpdlib.servers import FTPServer
 DEFAULT_VALUT="./res"
 
 class MyHandler(FTPHandler):
-
+        
     def on_connect(self):
         print("%s:%s connected" % (self.remote_ip, self.remote_port))
 
@@ -30,7 +30,6 @@ class MyHandler(FTPHandler):
 
     def on_file_received(self, file):
         # do something when a file has been received
-        # print(len(file))
         pass
 
     def on_incomplete_file_sent(self, file):
@@ -39,7 +38,6 @@ class MyHandler(FTPHandler):
 
     def on_incomplete_file_received(self, file):
         # remove partially uploaded files
-        import os
         os.remove(file)
 
 @click.command()
@@ -57,16 +55,15 @@ def serve(username, password, host, port, fpath):
     authorizer.add_user(username, password, fpath, perm="elradfmwMT")
     authorizer.add_anonymous("./anonymous")
 
-    handler = FTPHandler
-    handler.authorizer = authorizer
+    MyHandler.authorizer = authorizer
 
     try:
-        server = FTPServer((host, port), handler)
+        server = FTPServer((host, port), MyHandler)
         server.serve_forever()
     except Exception as e:
         print(e)
     
-    # TODO get target file length
+    # TODO Auto/Scan find device addr 
     # TODO add simple progress bar for checkout file tranfer
  
 
