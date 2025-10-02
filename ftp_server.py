@@ -1,11 +1,10 @@
 import os
 import click
+from _config_parser import ConfigParser
 from pyftpdlib.authorizers import DummyAuthorizer
 from pyftpdlib.handlers import FTPHandler
 from pyftpdlib.servers import FTPServer
 
-# Must create deault vault first
-DEFAULT_VALUT="./res"
 
 class MyHandler(FTPHandler):
         
@@ -41,24 +40,47 @@ class MyHandler(FTPHandler):
         os.remove(file)
 
 @click.command()
-@click.option('--username', '-u', default='123', help='[u]sername for authorize')
-@click.option('--password', '-p', default='123', help='[p]assword for authorize')
-@click.option('--host', '-h', default='172.20.10.13', help='[h]ostname of server')
-@click.option('--port', default=21 ,help='port of service')
-@click.option('--fpath', default=DEFAULT_VALUT, help='resource folder location')
-def serve(username, password, host, port, fpath):
+@click.option('--username', '-u', help='[u]sername for authorize')
+@click.option('--password', '-p', help='[p]assword for authorize')
+@click.option('--host', '-h', help='[h]ostname of server')
+@click.option('--port', help='port of service')
+@click.option('--fpath', help='resource folder location')
+@click.option('--config', '-c', default='config.ini', help='path to config file')
+def serve(username, password, host, port, fpath, config):
     print("Start FTP server...")
     if not os.path.isdir(fpath):
         os.makedirs(fpath)
+    
+    # Load config file
+    try:
+        cfg = ConfigParser(config)
+        settings = cfg.get_all_settings()
+    except FileNotFoundError:
+        print("Warning: Config file not found, using defaults")
+        settings = {
+            'username': '123',
+            'password': '123',
+            'host': '127.0.0.1',
+            'port': 21,
+            'fpath': './res'
+        }
+    
+     # Command-line arguments override config file
+    username = username or settings['username']
+    password = password or settings['password']
+    host = host or settings['host']
+    port = port or settings['port']
+    fpath = fpath or settings['fpath']
     
     authorizer = DummyAuthorizer()
     authorizer.add_user(username, password, fpath, perm="elradfmwMT")
     authorizer.add_anonymous("./anonymous")
 
-    MyHandler.authorizer = authorizer
+    handler = MyHandler
+    handler.authorizer = authorizer
 
     try:
-        server = FTPServer((host, port), MyHandler)
+        server = FTPServer((host, port), handler)
         server.serve_forever()
     except Exception as e:
         print(e)
